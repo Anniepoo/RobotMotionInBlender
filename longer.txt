@@ -1,0 +1,125 @@
+You've built a robot - a car, an arm, a funny humanoid with an expressive face, a plushie crammed full of servos. You've got some call to set all the servo positions in Python, and you found the last bug and you think everything's simple at this point.
+
+The pain in your life is just beginning. When you first turned it on, we bet the servos slewed over to some crazy angle and either you've got a nice pinch bruise or you spent the next two days rebuilding the parts the servos destroyed. Lesson - always be able to decouple the servos, then bring them up one axis at a time, and find out what number you need to send for each end of travel.
+
+So you've done that, and you decide the dancing bear should raise it's arm. So lets see, arm limits are between 30 and 150, let's set 130, and ... boom, the whole bear shakes and the bear gives a jerky convulsion.
+
+The arm has mass, you need to accelerate and decelerate smoothly.  So we do 30, 34, 39, 45, 55, 65,  78, 88, and fudge, the bear has 34 more servos.  And then your partner says the bear raises it's arm too high, and you...
+
+Even worse, the bear has to grab a present. You want to move the hand to the present, but the joints are shoulder and elbow. You move the shoulder, but the elbow angle is wrong, so you move the elbow, and now the shoulder's wrong, and your little girl's dream of a dancing bear at her birthday party is becoming your nightmare ...  This isn't going to scale. Even for simpler things like a robot arm, this 'inverse kinematics' problem becomes painful fast.
+
+Enter Blender. It's all about creating motion, after all.
+
+Blender's notorious for a difficult user interface. Good news is, with revision 2.9 it moved to a <strong>much</strong> more normal interface, and now is not much different from any other 3D program. It definitely <strong>is</strong> a large program, but you won't be using 98% of it.
+
+This isn't a Blender tutorial. The Blender documentation is great and YouTube will answer questions. But I will try to walk you through the major steps:
+<ol>
+ 	<li>Make a 'skeleton' (armature) that matches your robot</li>
+ 	<li>Constrain the joints to only move like the hardware robot</li>
+ 	<li>Set an IK target to fix the 'move the hand, not the shoulder and elbow' issue.</li>
+ 	<li>Animate</li>
+ 	<li>Export the servo positions to your robot control program</li>
+</ol>
+Blender has several 'modes'. Object mode to add a cube or move the table over. Edit mode to make the legs on the table thicker. Some things (people, animals, robots) are 'posable'. Pose mode is for posing.
+
+Blender works with 'meshes' - a house is a mesh, a character is a mesh. They're made up of vertices. But moving the individual vertices to animate would be unnatural. Only amoebas move by blobby shape changes . The wheel on a car rotates, but it's still a wheel shape. Bob's arm's skin moves with Bob's arm bone. We want to move the whole upper arm, not individual bits of detail.
+
+So the animator 'rigs' the mesh to an 'armature' - a skeleton of bones, like a human skeleton. Each vertex in the mesh is linked to one or more bones, and moves with it. that tattoo on Bob's bicep moves with his upper arm bone, while his scalp moves with his skull.
+
+We just want an armature, not the mesh (we gave you one in the sample). But the armature needs to match the hardware . Import straight on photos of the robot (use the longest lens you have), export your CAD file to blender, print out photos on overhead transparency film and tape to screen, or just measure the robot.
+
+<a href="https://github.com/Anniepoo/RobotMotionInBlender" target="_blank" rel="noopener">We made a sample project, a 3 axis robot arm</a>. It has a non-moving pedestal, rotating base, upper arm, and lower arm.
+
+The robot's <em>rest pose</em> is where the robot is when the axes are at zero. Ours is pointing the arm straight up. (TBD IMAGE)
+
+A newly made armature has a single bone.  The ball on the stubbier end of a bone is the tail, and the pointy end ball is the head. Your life will be better if you check Show Axis and In Front in properties panel -&gt; Object -&gt; Viewport Display.
+
+We renamed our bone <em>pedestal</em>. It represents the non-moving pedestal. Bones are 'posable' - that's the point, you can animate them. But this bone never moves. In pose mode we locked all axes of location, rotation, and scale.
+
+The base rotates on the pedestal, so the <em>base</em> bone will be a child of the <em>pedestal</em> bone. New child bones are 'extruded' (<strong>e key</strong>) from the parent's head. The new head needs to be at the pivot for the upper arm.
+
+The base rotates on the <em>base</em> bone's Z axis. It's not going to fly off, and it's not stretchy, so we locked location and scale. Euler angles are better for mechanical parts. We locked X and Y axes since the base just rotates about Z.
+
+The other bones are much the same. <em>upperarm</em> is a child of <em>base</em>, with its head at the upper-lower pivot. We set rotation to Euler XYZ and lock all but the Z axis rotation. The lower arm is similar. Its head is at the wrist pivot, and it too only rotates about Z.
+
+The armature now works. Select (pose mode) the <em>base</em> and turn it (z rotation) and the arm bones rotate as well. If you're playing with our sample file, we parented the sample mesh to the armature, so it moves with the bones. If you mess the position up experimenting, just undo or set the unlocked axes to zero.
+
+But its still possible to put the robot in impossible positions. Lets say the hardware robot base can only rotate 90 degrees each direction off center. That's fixable with <em>bone constraints</em>. In pose mode we added a <em>limit rotation constraint</em> to the <em>base</em> bone. The 'Owner' option is confusing. Local Space is usually the right answer.
+
+This is great, but we still have the 'bear grabs present' problem. Enter 'inverse kinematics', or IK.  We want to say where the wrist is, not where the shoulder and elbow joints are.
+
+We used a ball named IK. <em>lowerarm</em> bone has an <em>inverse kinematic</em> constraint to IK (it's the target in the panel). <em>Chain length</em> is how many bones will move trying to fulfill the IK constraint. 3 for us since the pedestal doesn't move.
+
+A gotcha - IK ignores limit rotation constraints. So there are also joint limits in Properties Panel -&gt; Bone Properties -&gt; Inverse Kinematics for each bone.
+
+If you're following along, your robot is now touching the ball. But we want to be able to move the joints in the 'old fashioned' <em>forward kinematics</em> way as well.  The 'Influence' setting is 'how hard should I work to obey this order?'. 0 is 'ignore it', while 1 is 'most important'. The value needs to change . Enter the small white buttons on the right of most controls. Clicking one makes that control animated. This is a brilliant part of Blender. Almost anything can be animated. Now you can hover over the value, type <em>i key</em> and record a 'keyframe' - a record of a value at the frame shown in the timeline. (Blenderholics,  we set this channel to constant interpolation). (TBD IMAGE OF BUTTON)
+
+We turned the IK off for frame zero. That's our first bit of animation.
+
+And speaking of animation, we're now ready to animate. 10 FPS is fine for most robots (Render Properties). We just put all the animations one after the other in the timeline, and grab the piece we want, so maybe 'bear chuckles' is frame 50 to 70.
+
+Back when we were moving the bear arm by typing in numbers, we had to do every frame. Thankfully not needed now. We only have to pose the robot on enough frames to get the behavior we want. These are <em>keyframes</em>. Blender does the in between frames. By default Blender adds the ease in and out, so we don't have bear convulsions. Cheack the 'Graph Editor' if you want to see the curves. (TBD ADD IMAGE)
+
+There's an animation of the robot picking something up and moving it in frames 50-75. And another motion where the robot avoids a nearby table while setting something on it from 90 to 105. The simplicity of move to frame, move IK, make a keyframe (<em>i key</em>), and move to next keyframe is miles ahead of typing in numbers, both in speedy workflow and in quality.
+
+We're ready to move our animation to our robot control program. There's a nifty hack for this.
+
+The de facto standard for animation files is 'BioVision Hierarchical' format. Blender can export it, though you might need to enable the plugin and select the armature. Here's a sample.
+<pre>HIERARCHY
+ROOT pedestal
+{
+        OFFSET 0.000000 0.000000 -1.000000
+        CHANNELS 6 Xposition Yposition Zposition Xrotation Yrotation Zrotation
+        JOINT base
+        {
+                OFFSET 0.000000 0.000000 1.000000
+                CHANNELS 3 Xrotation Yrotation Zrotation
+                JOINT upperarm
+                {
+                        OFFSET 0.000000 0.000000 0.500000
+                        CHANNELS 3 Xrotation Yrotation Zrotation
+                        JOINT lowerarm
+                        {
+                                OFFSET 0.000000 0.000000 3.100000
+                                CHANNELS 3 Xrotation Yrotation Zrotation
+                                End Site
+                                {
+                                        OFFSET 0.000000 0.000000 3.100000
+                                }
+                        }
+                }
+        }
+}
+MOTION
+Frames: 251
+Frame Time: 0.100000
+0.000000 0.000000 -1.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 
+0.000000 0.000000 -1.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 
+0.000000 0.000000 -1.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 -0.000000 0.000000 -0.000000 
+... lots of lines of this ...
+</pre>
+While this looks unlovely to parse, there's a hack. We don't care about the top part (the skeleton). We just want the frames of motion data from the bottom.
+
+Find the line number of the line after 'Frame Time'. (for our file it's 29) and use <code>tail -n +29 ./robotarm.bvh | sed --expression='s/ $//g' | sed --expression='s/ /,/g' &gt;robotarm.csv</code>  to get a csv file of the joint angles for each frame.
+
+Which of all these numbers is what servo? And how do we map these numbers to numbers sent to servo?
+
+We added an animation (frame 1-6) that exercises each free axis in order -- base, upper arm, lower arm -- to it's limits. Looking at the CSV file, channel 9 is the base,
+
+If you know the servo position at the limits on the hardware, you can map one to the other.
+
+Set the servos once every frame time (what you set in the render settings), and your animation will play.
+
+Don't forget, if you play animations one after the other, that the second animation needs to start with the robot where the last one left it. And remember that just because you ask for it, you may not get it.
+
+We'd note that the 'robot' need not be a robot. Anything that plays scripted animation can be treated this way.
+
+This is just a sampling of robot motion in Blender. There's lots more, like working with tasks like vision and grasping that need real time control, adjusting motion on the fly, making smooth moves between canned animations, easing in and out of animations, and blending animations.
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
