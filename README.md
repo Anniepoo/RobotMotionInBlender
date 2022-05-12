@@ -1,6 +1,8 @@
 # Demo of Robot Motion Planning in Blender
 
-This is a demo file for Anne Ogborn's "Programming Your Robot In Blender" on HackADay.
+This is a demo file for Anne Ogborn's ["Programming Your Robot In Blender" on HackADay](https://hackaday.com/2022/05/11/animate-your-robot-in-blender/).
+
+
 
 # Usage
 
